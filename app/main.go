@@ -38,7 +38,7 @@ func main() {
 
 	rootCmd.Flags().StringVarP(&folderPath, "folder", "f", "img", "Path to the folder containing images")
 	rootCmd.Flags().IntVarP(&quality, "quality", "q", 100, "Quality of encode of images (0-100)")
-	rootCmd.Flags().IntVarP(&size, "size", "s", 0, "Size of each photo will not be more than this size (in MB)")
+	rootCmd.Flags().IntVarP(&size, "size", "s", 0, "Size of each photo will not be more than this size (in KB)")
 	rootCmd.Flags().UintVarP(&blurRadius, "blur", "b", 0, "Radius for Box blur")
 	rootCmd.Flags().StringVarP(&format, "format", "F", "", "Format all photos into special format (png, jpg, jpeg, webp)")
 	rootCmd.Flags().StringVarP(&outputDirectory, "output", "o", "img_out", "Output directory for processed images")

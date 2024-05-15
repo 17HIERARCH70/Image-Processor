@@ -52,40 +52,62 @@ func ProcessImage(filePath string, quality, size int, blurRadius uint32, format,
 		img = bimg.NewImage(newImage)
 	}
 
-	// Resize image if size is specified
+	// Resize and compress image if size is specified
 	if size > 0 {
-		options := bimg.Options{
-			Width: size * 1024,
-		}
-		newImage, err := img.Process(options)
-		if err != nil {
-			fmt.Println("Error resizing image:", err)
-			return
-		}
-		img = bimg.NewImage(newImage)
-	}
+		maxSize := size * 1024 // Convert size from KB to bytes
+		for {
+			options := bimg.Options{
+				Quality: quality,
+			}
 
-	// Set output format
-	var imageType bimg.ImageType
-	switch strings.ToLower(format) {
-	case "jpeg", "jpg":
-		imageType = bimg.JPEG
-	case "png":
-		imageType = bimg.PNG
-	case "webp":
-		imageType = bimg.WEBP
-	default:
-		imageType = imgType(img)
+			// Set output format
+			switch strings.ToLower(format) {
+			case "jpeg", "jpg":
+				options.Type = bimg.JPEG
+			case "png":
+				options.Type = bimg.PNG
+			case "webp":
+				options.Type = bimg.WEBP
+			default:
+				options.Type = imgType(img)
+			}
+
+			newImage, err := img.Process(options)
+			if err != nil {
+				fmt.Println("Error processing image:", err)
+				return
+			}
+
+			if len(newImage) <= maxSize {
+				img = bimg.NewImage(newImage)
+				break
+			}
+
+			// Reduce quality or resize image to reduce file size
+			if quality > 10 {
+				quality -= 10
+			} else {
+				// Reduce dimensions by 10% if quality is already low
+				img = bimg.NewImage(newImage)
+				imgSize, err := img.Size()
+				if err != nil {
+					fmt.Println("Error getting image size:", err)
+					return
+				}
+				options.Width = imgSize.Width * 90 / 100
+				options.Height = imgSize.Height * 90 / 100
+			}
+		}
 	}
 
 	// Generate output file name
-	outputFileName := generateOutputFileName(filePath, nameSuffix, blurRadius, size, imageType)
+	outputFileName := generateOutputFileName(filePath, nameSuffix, blurRadius, size, imgType(img))
 	outputFilePath := filepath.Join(outputDirectory, outputFileName)
 
 	// Save image
 	options := bimg.Options{
 		Quality: quality,
-		Type:    imageType,
+		Type:    imgType(img),
 	}
 	newImage, err := img.Process(options)
 	if err != nil {
@@ -116,7 +138,7 @@ func generateOutputFileName(filePath, nameSuffix string, blurRadius uint32, size
 		suffix = "_" + nameSuffix
 	}
 
-	ext := filepath.Ext(filePath)
+	var ext string
 	switch imageType {
 	case bimg.JPEG:
 		ext = ".jpg"
@@ -124,6 +146,8 @@ func generateOutputFileName(filePath, nameSuffix string, blurRadius uint32, size
 		ext = ".png"
 	case bimg.WEBP:
 		ext = ".webp"
+	default:
+		ext = filepath.Ext(filePath)
 	}
 
 	return baseName + suffix + ext
